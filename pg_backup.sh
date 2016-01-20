@@ -6,10 +6,6 @@
  
 while [ $# -gt 0 ]; do
     case $1 in
-        -1)
-            ONCE="true"
-            shift 1
-            ;;
         -q)
             QUIET="true"
             shift 1
@@ -72,8 +68,15 @@ fi;
 function perform_backups()
 {
     SUFFIX=$1
-    FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d`$SUFFIX/"
- 
+
+    if [ $HOURLY ]; then
+        FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d_\%H-\%M-\%S`$SUFFIX/"
+    else
+        FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d`$SUFFIX/"
+    fi
+
+    CURRENT_TIMESTAMP=`date +\%Y\%m\%d\%H\%M\%S`
+
     if [ ! $QUIET ]; then
         echo "Making backup directory in $FINAL_BACKUP_DIR"
     fi
@@ -114,12 +117,12 @@ function perform_backups()
             echo "Schema-only backup of $DATABASE"
         fi
         
-        if [ $LOCALONLY ] && ! pg_dump -Fp -s "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress; then
+        if [ $LOCALONLY ] && ! pg_dump -Fp -s "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
             echo "[!!ERROR!!] Failed to backup local database schema of $DATABASE" 1>&2
-        elif [ ! $LOCALONLY ] && ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress; then
+        elif [ ! $LOCALONLY ] && ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
             echo "[!!ERROR!!] Failed to backup database schema of $DATABASE" 1>&2
         else
-            mv $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz
+            mv $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz
         fi
     done
  
@@ -151,12 +154,12 @@ function perform_backups()
                 echo "Plain backup of $DATABASE"
             fi;
  
-            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress; then
+            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local plain backup database $DATABASE" 1>&2
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce plain backup database $DATABASE" 1>&2
             else
-                mv $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE".sql.gz
+                mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz
             fi;
         fi;
  
@@ -165,12 +168,12 @@ function perform_backups()
                 echo "Custom backup of $DATABASE"
             fi
  
-            if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
+            if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local custom backup database $DATABASE"
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
                 echo "[!!ERROR!!] Failed to produce custom backup database $DATABASE"
             else
-                mv $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress $FINAL_BACKUP_DIR"$DATABASE".custom
+                mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom
             fi
         fi
     done
@@ -179,12 +182,6 @@ function perform_backups()
         echo -e "\nAll database backups complete!"
     fi
 }
-
-if [ $ONCE ]; then
-  perform_backups ""
-  
-  exit 0;
-fi
  
 # MONTHLY BACKUPS
  
@@ -215,7 +212,7 @@ fi
  
 
 
-HOUR_OF_DAY=`date +%-H` #0-24
+HOUR_OF_DAY=`date +%H` #0-24
 if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
     # Delete daily backups $DAYS_TO_KEEP days old or more
     find $BACKUP_DIR -maxdepth 1 -mtime +$DAYS_TO_KEEP -name "*-daily" -exec rm -rf '{}' ';'
@@ -231,7 +228,7 @@ fi
  
 HOURS_TO_KEEP=`expr $(($HOURS_TO_KEEP * 60))`
 
-# Delete hourly backups $HOURS_TO_KEEP hours old or more
+# Delete hourly backups $HOURS_TO_KEEP days old or more
 find $BACKUP_DIR -maxdepth 1 -mmin +$HOURS_TO_KEEP -name "*-hourly" -exec rm -rf '{}' ';'
  
 perform_backups "-hourly"
