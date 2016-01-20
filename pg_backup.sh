@@ -26,6 +26,10 @@ while [ $# -gt 0 ]; do
             DEFAULT_HOURS_TO_KEEP="$2"
             shift 2
             ;;
+        -kM)
+            DEFAULT_MONTHS_TO_KEEP="$2"
+            shift 2
+            ;;
         -u)
             DEFAULT_USERNAME="$2"
             shift 2
@@ -60,6 +64,10 @@ while [ $# -gt 0 ]; do
             ;;
         -q)
             QUIET="true"
+            shift 1
+            ;;
+        -d)
+            DIRECTORIES="true"
             shift 1
             ;;
         -H)
@@ -144,6 +152,10 @@ if [ $DEFAULT_WEEKS_TO_KEEP ]; then
     WEEKS_TO_KEEP="$DEFAULT_WEEKS_TO_KEEP"
 fi
 
+if [ $DEFAULT_MONTHS_TO_KEEP ]; then
+    MONTHS_TO_KEEP="$DEFAULT_MONTHS_TO_KEEP"
+fi
+
 if [ $DEFAULT_HOUR_OF_DAY_TO_KEEP ]; then
     HOUR_OF_DAY_TO_KEEP="$DEFAULT_HOUR_OF_DAY_TO_KEEP"
 fi
@@ -177,6 +189,11 @@ if [ $RECURRING ]; then
         ${ECHO} "Number of weeks to keep is not defined." 1>&2
         exit 1;        
     fi
+    
+    if [ ! $MONTHS_TO_KEEP ]; then
+        ${ECHO} "Number of months to keep is not defined." 1>&2
+        exit 1;        
+    fi
 
     if [ $HOURLY ]; then
         if [ ! $HOURS_TO_KEEP ]; then
@@ -203,9 +220,18 @@ function perform_backups()
     SUFFIX=$1
     
     if [ $HOURLY ]; then
-        FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d_\%H-\%M-\%S`$SUFFIX/"
+        DATE_TO_ADD=`date +\%Y-\%m-\%d_\%H-\%M-\%S`
     else
-        FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d`$SUFFIX/"
+        DATE_TO_ADD=`date +\%Y-\%m-\%d`
+    fi
+    
+    if [ ! $DIRECTORIES ] || [ ! $RECURRING ]; then
+        if [ $RECURRING ]; then
+            SUFFIX="-$SUFFIX"
+        fi
+        FINAL_BACKUP_DIR="$BACKUP_DIR$DATE_TO_ADD$SUFFIX/"    
+    else
+        FINAL_BACKUP_DIR="$BACKUP_DIR$SUFFIX/$DATE_TO_ADD/"    
     fi
  
     CURRENT_TIMESTAMP=`date +\%Y\%m\%d\%H\%M\%S`
@@ -324,13 +350,18 @@ fi
 # MONTHLY BACKUPS
  
 DAY_OF_MONTH=`date +%d`
+EXPIRED_DAYS=`expr $((($MONTHS_TO_KEEP * 30) + 1))`
  
 if [ $DAY_OF_MONTH -eq 1 ]; then
-    # Delete all expired monthly directories
-    find $BACKUP_DIR -maxdepth 1 -name "*-monthly" -exec rm -rf '{}' ';'
+
+    # Delete weekly directories $WEEKS_TO_KEEP days old or more    
+    if [ $DIRECTORIES ]; then
+        find $BACKUP_DIR/monthly -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'    
+    else
+        find $BACKUP_DIR -maxdepth 1 -mtime +$EXPIRED_DAYS -name "*-monthly" -exec rm -rf '{}' ';'
+    fi
  
-    perform_backups "-monthly"
- 
+    perform_backups "monthly" 
     exit 0;
 fi
  
@@ -340,21 +371,31 @@ DAY_OF_WEEK=`date +%u` #1-7 (Monday-Sunday)
 EXPIRED_DAYS=`expr $((($WEEKS_TO_KEEP * 7) + 1))`
  
 if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ]; then
-    # Delete all expired weekly directories
-    find $BACKUP_DIR -maxdepth 1 -mtime +$EXPIRED_DAYS -name "*-weekly" -exec rm -rf '{}' ';'
- 
-    perform_backups "-weekly"
- 
+
+    # Delete weekly directories $WEEKS_TO_KEEP days old or more
+    if [ $DIRECTORIES ]; then
+        find $BACKUP_DIR/weekly -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'    
+    else
+        find $BACKUP_DIR -maxdepth 1 -mtime +$EXPIRED_DAYS -name "*-weekly" -exec rm -rf '{}' ';'
+    fi
+    
+    perform_backups "weekly" 
     exit 0;
 fi
+
+# DAILY BACKUPS
  
 HOUR_OF_DAY=`date +%-H` #0-24
 if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
-    # Delete daily backups $DAYS_TO_KEEP days old or more
-    find $BACKUP_DIR -maxdepth 1 -mtime +$DAYS_TO_KEEP -name "*-daily" -exec rm -rf '{}' ';'
 
-    perform_backups "-daily"
- 
+    # Delete daily backups $DAYS_TO_KEEP days old or more
+    if [ $DIRECTORIES ]; then
+        find $BACKUP_DIR/daily -maxdepth 1 -mtime +$DAYS_TO_KEEP -exec rm -rf '{}' ';'    
+    else
+        find $BACKUP_DIR -maxdepth 1 -mtime +$DAYS_TO_KEEP -name "*-daily" -exec rm -rf '{}' ';'
+    fi
+
+    perform_backups "daily" 
     exit 0;
 fi
 
@@ -363,6 +404,11 @@ fi
 HOURS_TO_KEEP=`expr $(($HOURS_TO_KEEP * 60))`
 
 # Delete hourly backups $HOURS_TO_KEEP hours old or more
-find $BACKUP_DIR -maxdepth 1 -mmin +$HOURS_TO_KEEP -name "*-hourly" -exec rm -rf '{}' ';'
+if [ $DIRECTORIES ]; then
+    find $BACKUP_DIR/hourly -maxdepth 1 -mmin +$HOURS_TO_KEEP -exec rm -rf '{}' ';'    
+else
+    find $BACKUP_DIR -maxdepth 1 -mmin +$HOURS_TO_KEEP -name "*-hourly" -exec rm -rf '{}' ';'
+fi
  
-perform_backups "-hourly"
+perform_backups "hourly"
+exit 0;
