@@ -144,7 +144,7 @@ function perform_backups()
             fi;
  
             if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress; then
-                echo "[!!ERROR!!] Failed to produce plain local backup database $DATABASE" 1>&2
+                echo "[!!ERROR!!] Failed to produce local plain backup database $DATABASE" 1>&2
             elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce plain backup database $DATABASE" 1>&2
             else
@@ -158,7 +158,7 @@ function perform_backups()
             fi
  
             if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
-                echo "[!!ERROR!!] Failed to produce custom local backup database $DATABASE"
+                echo "[!!ERROR!!] Failed to produce local custom backup database $DATABASE"
             elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
                 echo "[!!ERROR!!] Failed to produce custom backup database $DATABASE"
             else
