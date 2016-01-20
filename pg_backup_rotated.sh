@@ -6,10 +6,18 @@
  
 while [ $# -gt 0 ]; do
     case $1 in
+        -1)
+            ONCE="true"
+            shift 1
+            ;;
         -q)
-        QUIET="true"
-        shift 1
-        ;;
+            QUIET="true"
+            shift 1
+            ;;
+        -H)
+            HOURLY="true"
+            shift 1
+            ;;
         -c)
             CONFIG_FILE_PATH="$2"
             shift 2
@@ -171,6 +179,12 @@ function perform_backups()
         echo -e "\nAll database backups complete!"
     fi
 }
+
+if [ $ONCE ]; then
+  perform_backups ""
+  
+  exit 0;
+fi
  
 # MONTHLY BACKUPS
  
@@ -199,9 +213,25 @@ if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ]; then
     exit 0;
 fi
  
-# DAILY BACKUPS
+
+
+HOUR_OF_DAY=`date +%-H` #0-24
+if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
+    # Delete daily backups $DAYS_TO_KEEP days old or more
+    find $BACKUP_DIR -maxdepth 1 -mtime +$DAYS_TO_KEEP -name "*-daily" -exec rm -rf '{}' ';'
+
+    perform_backups "-daily"
  
-# Delete daily backups 7 days old or more
-find $BACKUP_DIR -maxdepth 1 -mtime +$DAYS_TO_KEEP -name "*-daily" -exec rm -rf '{}' ';'
+    exit 0;
+fi
+
+
+
+# HOURLY BACKUPS
  
-perform_backups "-daily"
+HOURS_TO_KEEP=`expr $(($HOURS_TO_KEEP * 60))`
+
+# Delete hourly backups $HOURS_TO_KEEP hours old or more
+find $BACKUP_DIR -maxdepth 1 -mmin +$HOURS_TO_KEEP -name "*-hourly" -exec rm -rf '{}' ';'
+ 
+perform_backups "-hourly"
