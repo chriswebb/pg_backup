@@ -6,10 +6,10 @@
  
 while [ $# -gt 0 ]; do
     case $1 in
-		-q)
-			QUIET="true"
-			shift 1
-			;;
+	-q)
+	    QUIET="true"
+	    shift 1
+	    ;;
         -c)
             CONFIG_FILE_PATH="$2"
             shift 2
@@ -39,8 +39,8 @@ source "${CONFIG_FILE_PATH}"
  
 # Make sure we're running as the required backup user
 if [ "$BACKUP_USER" != "" -a "$(id -un)" != "$BACKUP_USER" ] ; then
-	echo "This script must be run as $BACKUP_USER. Exiting." 1>&2
-	exit 1
+    echo "This script must be run as $BACKUP_USER. Exiting." 1>&2
+    exit 1
 fi
  
  
@@ -49,11 +49,11 @@ fi
 ###########################
  
 if [ ! $HOSTNAME ]; then
-	LOCALONLY="true"
+    LOCALONLY="true"
 fi;
  
 if [ ! $USERNAME ]; then
-	USERNAME="postgres"
+    USERNAME="postgres"
 fi;
  
  
@@ -63,17 +63,17 @@ fi;
  
 function perform_backups()
 {
-	SUFFIX=$1
-	FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d`$SUFFIX/"
+    SUFFIX=$1
+    FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d`$SUFFIX/"
  
- 	if [ ! $QUIET ]; then
-		echo "Making backup directory in $FINAL_BACKUP_DIR"
-	fi
+    if [ ! $QUIET ]; then
+        echo "Making backup directory in $FINAL_BACKUP_DIR"
+    fi
  
-	if ! mkdir -p $FINAL_BACKUP_DIR; then
-		echo "Cannot create backup directory in $FINAL_BACKUP_DIR. Go and fix it!" 1>&2
-		exit 1;
-	fi
+    if ! mkdir -p $FINAL_BACKUP_DIR; then
+        echo "Cannot create backup directory in $FINAL_BACKUP_DIR. Go and fix it!" 1>&2
+        exit 1;
+    fi
  
  
 	###########################
