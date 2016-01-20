@@ -356,13 +356,17 @@ if [ $DAY_OF_MONTH -eq 1 ]; then
 
     # Delete weekly directories $WEEKS_TO_KEEP days old or more    
     if [ $DIRECTORIES ]; then
-        find $BACKUP_DIR/monthly -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'    
+        if [ -d $BACKUP_DIR"monthly" ]; then
+            find $BACKUP_DIR"monthly" -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'
+        fi
     else
         find $BACKUP_DIR -maxdepth 1 -mtime +$EXPIRED_DAYS -name "*-monthly" -exec rm -rf '{}' ';'
     fi
  
     perform_backups "monthly" 
-    exit 0;
+    if [ ! $DIRECTORIES ]; then
+        exit 0;
+    fi
 fi
  
 # WEEKLY BACKUPS
@@ -374,13 +378,17 @@ if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ]; then
 
     # Delete weekly directories $WEEKS_TO_KEEP days old or more
     if [ $DIRECTORIES ]; then
-        find $BACKUP_DIR/weekly -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'    
+        if [ -d $BACKUP_DIR"weekly" ]; then
+            find $BACKUP_DIR"weekly" -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'
+        fi
     else
         find $BACKUP_DIR -maxdepth 1 -mtime +$EXPIRED_DAYS -name "*-weekly" -exec rm -rf '{}' ';'
     fi
     
-    perform_backups "weekly" 
-    exit 0;
+    perform_backups "weekly"     
+    if [ ! $DIRECTORIES ]; then
+        exit 0;
+    fi
 fi
 
 # DAILY BACKUPS
@@ -390,13 +398,17 @@ if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
 
     # Delete daily backups $DAYS_TO_KEEP days old or more
     if [ $DIRECTORIES ]; then
-        find $BACKUP_DIR/daily -maxdepth 1 -mtime +$DAYS_TO_KEEP -exec rm -rf '{}' ';'    
+        if [ -d $BACKUP_DIR"daily" ]; then
+            find $BACKUP_DIR"daily" -maxdepth 1 -mtime +$DAYS_TO_KEEP -exec rm -rf '{}' ';'
+        fi
     else
         find $BACKUP_DIR -maxdepth 1 -mtime +$DAYS_TO_KEEP -name "*-daily" -exec rm -rf '{}' ';'
     fi
 
     perform_backups "daily" 
-    exit 0;
+    if [ ! $DIRECTORIES ]; then
+        exit 0;
+    fi
 fi
 
 # HOURLY BACKUPS
@@ -405,7 +417,9 @@ HOURS_TO_KEEP=`expr $(($HOURS_TO_KEEP * 60))`
 
 # Delete hourly backups $HOURS_TO_KEEP hours old or more
 if [ $DIRECTORIES ]; then
-    find $BACKUP_DIR/hourly -maxdepth 1 -mmin +$HOURS_TO_KEEP -exec rm -rf '{}' ';'    
+    if [ -d $BACKUP_DIR"hourly" ]; then
+        find $BACKUP_DIR"hourly" -maxdepth 1 -mmin +$HOURS_TO_KEEP -exec rm -rf '{}' ';'
+    fi
 else
     find $BACKUP_DIR -maxdepth 1 -mmin +$HOURS_TO_KEEP -name "*-hourly" -exec rm -rf '{}' ';'
 fi
