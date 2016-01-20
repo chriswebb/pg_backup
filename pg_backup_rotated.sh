@@ -5,26 +5,30 @@
 ###########################
  
 while [ $# -gt 0 ]; do
-        case $1 in
-                -c)
-                        CONFIG_FILE_PATH="$2"
-                        shift 2
-                        ;;
-                *)
-                        ${ECHO} "Unknown Option \"$1\"" 1>&2
-                        exit 2
-                        ;;
-        esac
+    case $1 in
+		-q)
+			QUIET="true"
+			shift 1
+			;;
+        -c)
+            CONFIG_FILE_PATH="$2"
+            shift 2
+            ;;
+        *)
+            ${ECHO} "Unknown Option \"$1\"" 1>&2
+            exit 2
+            ;;
+    esac
 done
  
 if [ -z $CONFIG_FILE_PATH ] ; then
-        SCRIPTPATH=$(cd ${0%/*} && pwd -P)
-        CONFIG_FILE_PATH="${SCRIPTPATH}/pg_backup.config"
+    SCRIPTPATH=$(cd ${0%/*} && pwd -P)
+    CONFIG_FILE_PATH="${SCRIPTPATH}/pg_backup.config"
 fi
  
 if [ ! -r ${CONFIG_FILE_PATH} ] ; then
-        echo "Could not load config file from ${CONFIG_FILE_PATH}" 1>&2
-        exit 1
+    echo "Could not load config file from ${CONFIG_FILE_PATH}" 1>&2
+    exit 1
 fi
  
 source "${CONFIG_FILE_PATH}"
@@ -45,7 +49,7 @@ fi
 ###########################
  
 if [ ! $HOSTNAME ]; then
-	HOSTNAME="localhost"
+	LOCALONLY="true"
 fi;
  
 if [ ! $USERNAME ]; then
@@ -62,7 +66,9 @@ function perform_backups()
 	SUFFIX=$1
 	FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d`$SUFFIX/"
  
-	echo "Making backup directory in $FINAL_BACKUP_DIR"
+ 	if [ ! $QUIET ]; then
+		echo "Making backup directory in $FINAL_BACKUP_DIR"
+	fi;
  
 	if ! mkdir -p $FINAL_BACKUP_DIR; then
 		echo "Cannot create backup directory in $FINAL_BACKUP_DIR. Go and fix it!" 1>&2
@@ -76,28 +82,40 @@ function perform_backups()
  
 	for SCHEMA_ONLY_DB in ${SCHEMA_ONLY_LIST//,/ }
 	do
-	        SCHEMA_ONLY_CLAUSE="$SCHEMA_ONLY_CLAUSE or datname ~ '$SCHEMA_ONLY_DB'"
+	    SCHEMA_ONLY_CLAUSE="$SCHEMA_ONLY_CLAUSE or datname ~ '$SCHEMA_ONLY_DB'"
 	done
  
 	SCHEMA_ONLY_QUERY="select datname from pg_database where false $SCHEMA_ONLY_CLAUSE order by datname;"
  
-	echo -e "\n\nPerforming schema-only backups"
-	echo -e "--------------------------------------------\n"
+ 	if [ ! $QUIET ]; then
+		echo -e "\n\nPerforming schema-only backups"
+		echo -e "--------------------------------------------\n"
+	fi;
  
-	SCHEMA_ONLY_DB_LIST=`psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$SCHEMA_ONLY_QUERY" postgres`
+ 	if [ $LOCALONLY ]; then
+		SCHEMA_ONLY_DB_LIST=`psql -h -At -c "$SCHEMA_ONLY_QUERY" postgres`
+	else
+		SCHEMA_ONLY_DB_LIST=`psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$SCHEMA_ONLY_QUERY" postgres`
+	fi;
  
-	echo -e "The following databases were matched for schema-only backup:\n${SCHEMA_ONLY_DB_LIST}\n"
+ 	if [ ! $QUIET ]; then
+		echo -e "The following databases were matched for schema-only backup:\n${SCHEMA_ONLY_DB_LIST}\n"
+	fi;
  
 	for DATABASE in $SCHEMA_ONLY_DB_LIST
 	do
-	        echo "Schema-only backup of $DATABASE"
- 
-	        if ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress; then
-	                echo "[!!ERROR!!] Failed to backup database schema of $DATABASE" 1>&2
-	        else
-	                mv $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz
-	        fi
-	done
+		if [ ! $QUIET ]; then
+        	echo "Schema-only backup of $DATABASE"
+        fi;
+        
+        if [ $LOCALONLY ] && ! pg_dump -Fp -s "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress; then
+            echo "[!!ERROR!!] Failed to backup local database schema of $DATABASE" 1>&2
+        elif [ ! $LOCALONLY ] && ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress; then
+            echo "[!!ERROR!!] Failed to backup database schema of $DATABASE" 1>&2
+        else
+            mv $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz
+        fi;
+	done;
  
  
 	###########################
@@ -107,40 +125,57 @@ function perform_backups()
 	for SCHEMA_ONLY_DB in ${SCHEMA_ONLY_LIST//,/ }
 	do
 		EXCLUDE_SCHEMA_ONLY_CLAUSE="$EXCLUDE_SCHEMA_ONLY_CLAUSE and datname !~ '$SCHEMA_ONLY_DB'"
-	done
+	done;
  
 	FULL_BACKUP_QUERY="select datname from pg_database where not datistemplate and datallowconn $EXCLUDE_SCHEMA_ONLY_CLAUSE order by datname;"
  
-	echo -e "\n\nPerforming full backups"
-	echo -e "--------------------------------------------\n"
+ 	if [ ! $QUIET ]; then
+		echo -e "\n\nPerforming full backups"
+		echo -e "--------------------------------------------\n"
+	fi;
  
-	for DATABASE in `psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$FULL_BACKUP_QUERY" postgres`
+ 	if [ $LOCALONLY ]; then
+ 		DATABASES=`psql -At -c "$FULL_BACKUP_QUERY" postgres`
+ 	else
+ 		DATABASES=`psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$FULL_BACKUP_QUERY" postgres`
+ 	fi;
+
+	for DATABASE in $DATABASES
 	do
 		if [ $ENABLE_PLAIN_BACKUPS = "yes" ]
 		then
-			echo "Plain backup of $DATABASE"
+ 			if [ ! $QUIET ]; then
+				echo "Plain backup of $DATABASE"
+			fi;
  
-			if ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress; then
+			if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress; then
+				echo "[!!ERROR!!] Failed to produce plain local backup database $DATABASE" 1>&2
+			elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress; then
 				echo "[!!ERROR!!] Failed to produce plain backup database $DATABASE" 1>&2
 			else
 				mv $FINAL_BACKUP_DIR"$DATABASE".sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE".sql.gz
-			fi
-		fi
+			fi;
+		fi;
  
 		if [ $ENABLE_CUSTOM_BACKUPS = "yes" ]
 		then
-			echo "Custom backup of $DATABASE"
+ 			if [ ! $QUIET ]; then
+				echo "Custom backup of $DATABASE"
+			fi;
  
-			if ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
+			if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
+				echo "[!!ERROR!!] Failed to produce custom local backup database $DATABASE"
+			if [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
 				echo "[!!ERROR!!] Failed to produce custom backup database $DATABASE"
 			else
 				mv $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress $FINAL_BACKUP_DIR"$DATABASE".custom
-			fi
-		fi
+			fi;
+		fi; 
+	done;
  
-	done
- 
-	echo -e "\nAll database backups complete!"
+ 	if [ ! $QUIET ]; then
+		echo -e "\nAll database backups complete!"
+	fi;
 }
  
 # MONTHLY BACKUPS
