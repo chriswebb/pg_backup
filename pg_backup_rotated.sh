@@ -92,7 +92,7 @@ function perform_backups()
 	fi;
  
  	if [ $LOCALONLY ]; then
-		SCHEMA_ONLY_DB_LIST=`psql -h -At -c "$SCHEMA_ONLY_QUERY" postgres`
+		SCHEMA_ONLY_DB_LIST=`psql -At -c "$SCHEMA_ONLY_QUERY" postgres`
 	else
 		SCHEMA_ONLY_DB_LIST=`psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$SCHEMA_ONLY_QUERY" postgres`
 	fi;
