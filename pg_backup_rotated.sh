@@ -68,20 +68,19 @@ function perform_backups()
  
  	if [ ! $QUIET ]; then
 		echo "Making backup directory in $FINAL_BACKUP_DIR"
-	fi;
+	fi
  
 	if ! mkdir -p $FINAL_BACKUP_DIR; then
 		echo "Cannot create backup directory in $FINAL_BACKUP_DIR. Go and fix it!" 1>&2
 		exit 1;
-	fi;
+	fi
  
  
 	###########################
 	### SCHEMA-ONLY BACKUPS ###
 	###########################
  
-	for SCHEMA_ONLY_DB in ${SCHEMA_ONLY_LIST//,/ }
-	do
+	for SCHEMA_ONLY_DB in ${SCHEMA_ONLY_LIST//,/ }; do
 	    SCHEMA_ONLY_CLAUSE="$SCHEMA_ONLY_CLAUSE or datname ~ '$SCHEMA_ONLY_DB'"
 	done
  
@@ -100,13 +99,12 @@ function perform_backups()
  
  	if [ ! $QUIET ]; then
 		echo -e "The following databases were matched for schema-only backup:\n${SCHEMA_ONLY_DB_LIST}\n"
-	fi;
+	fi
  
-	for DATABASE in $SCHEMA_ONLY_DB_LIST
-	do
+	for DATABASE in $SCHEMA_ONLY_DB_LIST; do
 		if [ ! $QUIET ]; then
         	echo "Schema-only backup of $DATABASE"
-        fi;
+        fi
         
         if [ $LOCALONLY ] && ! pg_dump -Fp -s "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress; then
             echo "[!!ERROR!!] Failed to backup local database schema of $DATABASE" 1>&2
@@ -114,36 +112,33 @@ function perform_backups()
             echo "[!!ERROR!!] Failed to backup database schema of $DATABASE" 1>&2
         else
             mv $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA.sql.gz
-        fi;
-	done;
+        fi
+	done
  
  
 	###########################
 	###### FULL BACKUPS #######
 	###########################
  
-	for SCHEMA_ONLY_DB in ${SCHEMA_ONLY_LIST//,/ }
-	do
+	for SCHEMA_ONLY_DB in ${SCHEMA_ONLY_LIST//,/ };	do
 		EXCLUDE_SCHEMA_ONLY_CLAUSE="$EXCLUDE_SCHEMA_ONLY_CLAUSE and datname !~ '$SCHEMA_ONLY_DB'"
-	done;
+	done
  
 	FULL_BACKUP_QUERY="select datname from pg_database where not datistemplate and datallowconn $EXCLUDE_SCHEMA_ONLY_CLAUSE order by datname;"
  
  	if [ ! $QUIET ]; then
 		echo -e "\n\nPerforming full backups"
 		echo -e "--------------------------------------------\n"
-	fi;
+	fi
  
  	if [ $LOCALONLY ]; then
  		DATABASES=`psql -At -c "$FULL_BACKUP_QUERY" postgres`
  	else
  		DATABASES=`psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$FULL_BACKUP_QUERY" postgres`
- 	fi;
+ 	fi
 
-	for DATABASE in $DATABASES
-	do
-		if [ $ENABLE_PLAIN_BACKUPS = "yes" ]
-		then
+	for DATABASE in $DATABASES; do
+		if [ $ENABLE_PLAIN_BACKUPS = "yes" ]; then
  			if [ ! $QUIET ]; then
 				echo "Plain backup of $DATABASE"
 			fi;
@@ -157,33 +152,31 @@ function perform_backups()
 			fi;
 		fi;
  
-		if [ $ENABLE_CUSTOM_BACKUPS = "yes" ]
-		then
+		if [ $ENABLE_CUSTOM_BACKUPS = "yes" ]; then
  			if [ ! $QUIET ]; then
 				echo "Custom backup of $DATABASE"
-			fi;
+			fi
  
 			if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
 				echo "[!!ERROR!!] Failed to produce custom local backup database $DATABASE"
-			if [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
+			elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress; then
 				echo "[!!ERROR!!] Failed to produce custom backup database $DATABASE"
 			else
 				mv $FINAL_BACKUP_DIR"$DATABASE".custom.in_progress $FINAL_BACKUP_DIR"$DATABASE".custom
-			fi;
-		fi; 
-	done;
+			fi
+		fi
+	done
  
  	if [ ! $QUIET ]; then
 		echo -e "\nAll database backups complete!"
-	fi;
+	fi
 }
  
 # MONTHLY BACKUPS
  
 DAY_OF_MONTH=`date +%d`
  
-if [ $DAY_OF_MONTH -eq 1 ];
-then
+if [ $DAY_OF_MONTH -eq 1 ]; then
 	# Delete all expired monthly directories
 	find $BACKUP_DIR -maxdepth 1 -name "*-monthly" -exec rm -rf '{}' ';'
  
@@ -197,8 +190,7 @@ fi
 DAY_OF_WEEK=`date +%u` #1-7 (Monday-Sunday)
 EXPIRED_DAYS=`expr $((($WEEKS_TO_KEEP * 7) + 1))`
  
-if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ];
-then
+if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ]; then
 	# Delete all expired weekly directories
 	find $BACKUP_DIR -maxdepth 1 -mtime +$EXPIRED_DAYS -name "*-weekly" -exec rm -rf '{}' ';'
  
