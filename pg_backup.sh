@@ -6,8 +6,56 @@
  
 while [ $# -gt 0 ]; do
     case $1 in
-        -1)
-            ONCE="true"
+		-kHD)
+            DEFAULT_HOUR_OF_DAY_TO_KEEP"$2"
+            shift 2
+            ;;
+		-kDW)
+            DEFAULT_DAY_OF_WEEK_TO_KEEP="$2"
+            shift 2
+            ;;
+		-kD)
+            DEFAULT_DAYS_TO_KEEP="$2"
+            shift 2
+            ;;
+		-kW)
+            DEFAULT_WEEKS_TO_KEEP="$2"
+            shift 2
+            ;;
+		-kH)
+            DEFAULT_HOURS_TO_KEEP="$2"
+            shift 2
+            ;;
+        -u)
+            DEFAULT_USERNAME="$2"
+            shift 2
+            ;;
+        -h)
+            DEFAULT_HOSTNAME="$2"
+            shift 2
+            ;;
+        -o)
+            DEFAULT_BACKUP_DIR="$2"
+            shift 2
+            ;;
+        -s)
+            DEFAULT_SCHEMA_ONLY_LIST="$2"
+            shift 2
+            ;;
+        -p)
+            DEFAULT_ENABLE_PLAIN_BACKUPS="true"
+            shift 1
+            ;;
+        -C)
+            DEFAULT_ENABLE_CUSTOM_BACKUPS="true"
+            shift 1
+            ;;
+        -r)
+            RECURRING="true"
+            shift 1
+            ;;
+		-R)
+            RECURRING="true"
             shift 1
             ;;
         -q)
@@ -34,16 +82,13 @@ if [ -z $CONFIG_FILE_PATH ] ; then
     CONFIG_FILE_PATH="${SCRIPTPATH}/pg_backup.config"
 fi
  
-if [ ! -r ${CONFIG_FILE_PATH} ] ; then
-    echo "Could not load config file from ${CONFIG_FILE_PATH}" 1>&2
-    exit 1
-fi
+if [ -r ${CONFIG_FILE_PATH} ] ; then
+    source "${CONFIG_FILE_PATH}"
+fi 
  
-source "${CONFIG_FILE_PATH}"
- 
-###########################
-#### PRE-BACKUP CHECKS ####
-###########################
+###################################
+#### PRE-INITIALISATION CHECKS ####
+###################################
  
 # Make sure we're running as the required backup user
 if [ "$BACKUP_USER" != "" -a "$(id -un)" != "$BACKUP_USER" ] ; then
@@ -51,19 +96,103 @@ if [ "$BACKUP_USER" != "" -a "$(id -un)" != "$BACKUP_USER" ] ; then
     exit 1
 fi
  
- 
 ###########################
 ### INITIALISE DEFAULTS ###
 ###########################
  
+if [ $DEFAULT_HOSTNAME ]; then
+    HOSTNAME="$DEFAULT_HOSTNAME"
+fi
+
 if [ ! $HOSTNAME ]; then
     LOCALONLY="true"
 fi;
- 
+
+if [ $DEFAULT_USERNAME ]; then
+    USERNAME="$DEFAULT_USERNAME"
+fi
+
 if [ ! $USERNAME ]; then
     USERNAME="postgres"
 fi;
+
+if [ $DEFAULT_BACKUP_DIR ]; then
+    BACKUP_DIR="$DEFAULT_BACKUP_DIR"
+fi
+
+if [ $DEFAULT_SCHEMA_ONLY_LIST ]; then
+    SCHEMA_ONLY_LIST="$DEFAULT_SCHEMA_ONLY_LIST"
+fi
+
+if [ $DEFAULT_ENABLE_CUSTOM_BACKUPS ]; then
+    ENABLE_CUSTOM_BACKUPS="$DEFAULT_ENABLE_CUSTOM_BACKUPS"
+fi
+
+if [ $DEFAULT_ENABLE_PLAIN_BACKUPS ]; then
+    ENABLE_PLAIN_BACKUPS="$DEFAULT_ENABLE_PLAIN_BACKUPS"
+fi
+
+if [ $DEFAULT_DAY_OF_WEEK_TO_KEEP ]; then
+    DAY_OF_WEEK_TO_KEEP="$DEFAULT_DAY_OF_WEEK_TO_KEEP"
+fi
+
+if [ $DEFAULT_DAYS_TO_KEEP ]; then
+    DAYS_TO_KEEP="$DEFAULT_DAYS_TO_KEEP"
+fi
+
+if [ $DEFAULT_WEEKS_TO_KEEP ]; then
+    WEEKS_TO_KEEP="$DEFAULT_WEEKS_TO_KEEP"
+fi
+
+if [ $DEFAULT_HOUR_OF_DAY_TO_KEEP ]; then
+    HOUR_OF_DAY_TO_KEEP="$DEFAULT_HOUR_OF_DAY_TO_KEEP"
+fi
+
+if [ $DEFAULT_HOURS_TO_KEEP ]; then
+    HOURS_TO_KEEP="$DEFAULT_HOURS_TO_KEEP"
+fi
+
+###################################
+#### PRE-BACKUP CHECKS ####
+###################################
  
+ 
+# Check Required Variables
+
+if [ $RECURRING ]; then
+	if [ ! $DAY_OF_WEEK_TO_KEEP ]; then
+		${ECHO} "The day of week to keep is not defined." 1>&2
+		exit 1;		
+	elif [ $DAY_OF_WEEK_TO_KEEP -gt 7 ] || [ $DAY_OF_WEEK_TO_KEEP -lt 1 ]; then
+		${ECHO} "The day of week to keep \"$DAY_OF_WEEK_TO_KEEP\" is not valid value.  It must be from 1 to 7." 1>&2
+		exit 1;		
+	fi
+
+	if [ ! $DAYS_TO_KEEP ]; then
+		${ECHO} "Number of days to keep is not defined." 1>&2
+		exit 1;		
+	fi
+
+	if [ ! $WEEKS_TO_KEEP ]; then
+		${ECHO} "Number of weeks to keep is not defined." 1>&2
+		exit 1;		
+	fi
+
+    if [ $HOURLY ]; then
+		if [ ! $HOURS_TO_KEEP ]; then
+			${ECHO} "Number of hours to keep is not defined." 1>&2
+			exit 1;		
+		fi
+		
+		if [ ! $HOUR_OF_DAY_TO_KEEP ]; then
+			${ECHO} "The hour of day to keep is not defined." 1>&2
+			exit 1;			
+		elif [ $HOUR_OF_DAY_TO_KEEP -gt 23 ] || [ $HOUR_OF_DAY_TO_KEEP -lt 0 ]; then
+			${ECHO} "The hour of day to keep \"$HOUR_OF_DAY_TO_KEEP\" is not valid value.  It must be from 0 to 23." 1>&2
+			exit 1;		
+		fi
+    fi 
+fi
  
 ###########################
 #### START THE BACKUPS ####
@@ -72,7 +201,7 @@ fi;
 function perform_backups()
 {
     SUFFIX=$1
-	
+    
     if [ $HOURLY ]; then
         FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d_\%H-\%M-\%S`$SUFFIX/"
     else
@@ -80,7 +209,7 @@ function perform_backups()
     fi
  
     CURRENT_TIMESTAMP=`date +\%Y\%m\%d\%H\%M\%S`
-	
+    
     if [ ! $QUIET ]; then
         echo "Making backup directory in $FINAL_BACKUP_DIR"
     fi
@@ -187,7 +316,7 @@ function perform_backups()
     fi
 }
 
-if [ $ONCE ]; then
+if [ ! $RECURRING ]; then
     perform_backups ""
     exit 0;
 fi
@@ -219,8 +348,6 @@ if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ]; then
     exit 0;
 fi
  
-
-
 HOUR_OF_DAY=`date +%-H` #0-24
 if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
     # Delete daily backups $DAYS_TO_KEEP days old or more
@@ -230,8 +357,6 @@ if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
  
     exit 0;
 fi
-
-
 
 # HOURLY BACKUPS
  
