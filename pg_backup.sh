@@ -6,12 +6,12 @@
  
 while [ $# -gt 0 ]; do
     case $1 in
-        -q)
-            QUIET="true"
+        -1)
+            ONCE="true"
             shift 1
             ;;
-        -1)
-            ONE_TIME="true"
+        -q)
+            QUIET="true"
             shift 1
             ;;
         -H)
@@ -72,15 +72,15 @@ fi;
 function perform_backups()
 {
     SUFFIX=$1
-
+	
     if [ $HOURLY ]; then
         FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d_\%H-\%M-\%S`$SUFFIX/"
     else
         FINAL_BACKUP_DIR=$BACKUP_DIR"`date +\%Y-\%m-\%d`$SUFFIX/"
     fi
-
+ 
     CURRENT_TIMESTAMP=`date +\%Y\%m\%d\%H\%M\%S`
-
+	
     if [ ! $QUIET ]; then
         echo "Making backup directory in $FINAL_BACKUP_DIR"
     fi
@@ -186,14 +186,12 @@ function perform_backups()
         echo -e "\nAll database backups complete!"
     fi
 }
- 
 
-if [ $ONE_TIME ]; then
+if [ $ONCE ]; then
     perform_backups ""
     exit 0;
 fi
-
-
+ 
 # MONTHLY BACKUPS
  
 DAY_OF_MONTH=`date +%d`
@@ -223,7 +221,7 @@ fi
  
 
 
-HOUR_OF_DAY=`date +%H` #0-24
+HOUR_OF_DAY=`date +%-H` #0-24
 if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
     # Delete daily backups $DAYS_TO_KEEP days old or more
     find $BACKUP_DIR -maxdepth 1 -mtime +$DAYS_TO_KEEP -name "*-daily" -exec rm -rf '{}' ';'
@@ -239,7 +237,7 @@ fi
  
 HOURS_TO_KEEP=`expr $(($HOURS_TO_KEEP * 60))`
 
-# Delete hourly backups $HOURS_TO_KEEP days old or more
+# Delete hourly backups $HOURS_TO_KEEP hours old or more
 find $BACKUP_DIR -maxdepth 1 -mmin +$HOURS_TO_KEEP -name "*-hourly" -exec rm -rf '{}' ';'
  
 perform_backups "-hourly"
