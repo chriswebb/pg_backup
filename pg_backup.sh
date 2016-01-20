@@ -5,32 +5,35 @@
 ###########################
  
 while [ $# -gt 0 ]; do
-        case $1 in
-        		-q)
-						QUIET="true"
-						shift 1
-						;;
-                -c)
-                        if [ -r "$2" ]; then
-                                source "$2"
-                                shift 2
-                        else
-                                ${ECHO} "Unreadable config file \"$2\"" 1>&2
-                                exit 1
-                        fi
-                        ;;
-                *)
-                        ${ECHO} "Unknown Option \"$1\"" 1>&2
-                        exit 2
-                        ;;
-        esac
+    case $1 in
+		-q)
+			QUIET="true"
+			shift 1
+			;;
+        -c)
+            CONFIG_FILE_PATH="$2"
+            shift 2
+            ;;
+        *)
+            ${ECHO} "Unknown Option \"$1\"" 1>&2
+            exit 2
+            ;;
+    esac
 done
  
-if [ $# = 0 ]; then
-        SCRIPTPATH=$(cd ${0%/*} && pwd -P)
-        source $SCRIPTPATH/pg_backup.config
+if [ -z $CONFIG_FILE_PATH ] ; then
+    SCRIPTPATH=$(cd ${0%/*} && pwd -P)
+    CONFIG_FILE_PATH="${SCRIPTPATH}/pg_backup.config"
 fi
  
+if [ ! -r ${CONFIG_FILE_PATH} ] ; then
+    echo "Could not load config file from ${CONFIG_FILE_PATH}" 1>&2
+    exit 1
+fi
+ 
+source "${CONFIG_FILE_PATH}"
+
+
 ###########################
 #### PRE-BACKUP CHECKS ####
 ###########################
