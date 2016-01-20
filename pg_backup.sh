@@ -6,23 +6,23 @@
  
 while [ $# -gt 0 ]; do
     case $1 in
-		-kHD)
+        -kHD)
             DEFAULT_HOUR_OF_DAY_TO_KEEP"$2"
             shift 2
             ;;
-		-kDW)
+        -kDW)
             DEFAULT_DAY_OF_WEEK_TO_KEEP="$2"
             shift 2
             ;;
-		-kD)
+        -kD)
             DEFAULT_DAYS_TO_KEEP="$2"
             shift 2
             ;;
-		-kW)
+        -kW)
             DEFAULT_WEEKS_TO_KEEP="$2"
             shift 2
             ;;
-		-kH)
+        -kH)
             DEFAULT_HOURS_TO_KEEP="$2"
             shift 2
             ;;
@@ -54,7 +54,7 @@ while [ $# -gt 0 ]; do
             RECURRING="true"
             shift 1
             ;;
-		-R)
+        -R)
             RECURRING="true"
             shift 1
             ;;
@@ -160,37 +160,37 @@ fi
 # Check Required Variables
 
 if [ $RECURRING ]; then
-	if [ ! $DAY_OF_WEEK_TO_KEEP ]; then
-		${ECHO} "The day of week to keep is not defined." 1>&2
-		exit 1;		
-	elif [ $DAY_OF_WEEK_TO_KEEP -gt 7 ] || [ $DAY_OF_WEEK_TO_KEEP -lt 1 ]; then
-		${ECHO} "The day of week to keep \"$DAY_OF_WEEK_TO_KEEP\" is not valid value.  It must be from 1 to 7." 1>&2
-		exit 1;		
-	fi
+    if [ ! $DAY_OF_WEEK_TO_KEEP ]; then
+        ${ECHO} "The day of week to keep is not defined." 1>&2
+        exit 1;        
+    elif [ $DAY_OF_WEEK_TO_KEEP -gt 7 ] || [ $DAY_OF_WEEK_TO_KEEP -lt 1 ]; then
+        ${ECHO} "The day of week to keep \"$DAY_OF_WEEK_TO_KEEP\" is not valid value.  It must be from 1 to 7." 1>&2
+        exit 1;        
+    fi
 
-	if [ ! $DAYS_TO_KEEP ]; then
-		${ECHO} "Number of days to keep is not defined." 1>&2
-		exit 1;		
-	fi
+    if [ ! $DAYS_TO_KEEP ]; then
+        ${ECHO} "Number of days to keep is not defined." 1>&2
+        exit 1;        
+    fi
 
-	if [ ! $WEEKS_TO_KEEP ]; then
-		${ECHO} "Number of weeks to keep is not defined." 1>&2
-		exit 1;		
-	fi
+    if [ ! $WEEKS_TO_KEEP ]; then
+        ${ECHO} "Number of weeks to keep is not defined." 1>&2
+        exit 1;        
+    fi
 
     if [ $HOURLY ]; then
-		if [ ! $HOURS_TO_KEEP ]; then
-			${ECHO} "Number of hours to keep is not defined." 1>&2
-			exit 1;		
-		fi
-		
-		if [ ! $HOUR_OF_DAY_TO_KEEP ]; then
-			${ECHO} "The hour of day to keep is not defined." 1>&2
-			exit 1;			
-		elif [ $HOUR_OF_DAY_TO_KEEP -gt 23 ] || [ $HOUR_OF_DAY_TO_KEEP -lt 0 ]; then
-			${ECHO} "The hour of day to keep \"$HOUR_OF_DAY_TO_KEEP\" is not valid value.  It must be from 0 to 23." 1>&2
-			exit 1;		
-		fi
+        if [ ! $HOURS_TO_KEEP ]; then
+            ${ECHO} "Number of hours to keep is not defined." 1>&2
+            exit 1;        
+        fi
+        
+        if [ ! $HOUR_OF_DAY_TO_KEEP ]; then
+            ${ECHO} "The hour of day to keep is not defined." 1>&2
+            exit 1;            
+        elif [ $HOUR_OF_DAY_TO_KEEP -gt 23 ] || [ $HOUR_OF_DAY_TO_KEEP -lt 0 ]; then
+            ${ECHO} "The hour of day to keep \"$HOUR_OF_DAY_TO_KEEP\" is not valid value.  It must be from 0 to 23." 1>&2
+            exit 1;        
+        fi
     fi 
 fi
  
