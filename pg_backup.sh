@@ -10,6 +10,10 @@ while [ $# -gt 0 ]; do
             QUIET="true"
             shift 1
             ;;
+        -1)
+            ONE_TIME="true"
+            shift 1
+            ;;
         -H)
             HOURLY="true"
             shift 1
@@ -183,6 +187,13 @@ function perform_backups()
     fi
 }
  
+
+if [ $ONE_TIME ]; then
+    perform_backups ""
+    exit 0;
+fi
+
+
 # MONTHLY BACKUPS
  
 DAY_OF_MONTH=`date +%d`
