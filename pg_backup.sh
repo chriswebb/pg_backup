@@ -348,13 +348,13 @@ if [ ! $RECURRING ]; then
 fi
  
 # MONTHLY BACKUPS
- 
 DAY_OF_MONTH=`date +%d`
+HOUR_OF_DAY=`date +%-H` #0-24
 EXPIRED_DAYS=`expr $((($MONTHS_TO_KEEP * 30) + 1))`
  
-if [ $DAY_OF_MONTH -eq 1 ]; then
+if [ $DAY_OF_MONTH -eq 1 ] && [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ]; then
 
-    # Delete weekly directories $WEEKS_TO_KEEP days old or more    
+    # Delete monthly directories $MONTHS_TO_KEEP months old or more    
     if [ $DIRECTORIES ]; then
         if [ -d $BACKUP_DIR"monthly" ]; then
             find $BACKUP_DIR"monthly" -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'
@@ -370,13 +370,12 @@ if [ $DAY_OF_MONTH -eq 1 ]; then
 fi
  
 # WEEKLY BACKUPS
- 
 DAY_OF_WEEK=`date +%u` #1-7 (Monday-Sunday)
 EXPIRED_DAYS=`expr $((($WEEKS_TO_KEEP * 7) + 1))`
  
-if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ]; then
+if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ] && [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ]; then
 
-    # Delete weekly directories $WEEKS_TO_KEEP days old or more
+    # Delete weekly directories $WEEKS_TO_KEEP weeks old or more
     if [ $DIRECTORIES ]; then
         if [ -d $BACKUP_DIR"weekly" ]; then
             find $BACKUP_DIR"weekly" -maxdepth 1 -mtime +$EXPIRED_DAYS -exec rm -rf '{}' ';'
@@ -392,8 +391,6 @@ if [ $DAY_OF_WEEK = $DAY_OF_WEEK_TO_KEEP ]; then
 fi
 
 # DAILY BACKUPS
- 
-HOUR_OF_DAY=`date +%-H` #0-24
 if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
 
     # Delete daily backups $DAYS_TO_KEEP days old or more
@@ -412,7 +409,6 @@ if [ $HOUR_OF_DAY = $HOUR_OF_DAY_TO_KEEP ] || [ ! $HOURLY ]; then
 fi
 
 # HOURLY BACKUPS
- 
 HOURS_TO_KEEP=`expr $(($HOURS_TO_KEEP * 60))`
 
 # Delete hourly backups $HOURS_TO_KEEP hours old or more
