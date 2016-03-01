@@ -1,4 +1,5 @@
 PostgreSQL Database Management System (formerly known as Postgres, then as Postgres95)
+Portions Copyright (c) 2016, Chris Webb <christoher.h.webb@gmail.com>
 Portions Copyright (c) 1996-2008, The PostgreSQL Global Development Group
 Portions Copyright (c) 1994, The Regents of the University of California
 Permission to use, copy, modify, and distribute this software and its documentation for any purpose, without fee, and without a written agreement is hereby granted, provided that the above copyright notice and this paragraph and the following two paragraphs appear in all copies.
