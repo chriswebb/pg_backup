@@ -302,9 +302,9 @@ function perform_backups()
             echo "Schema-only backup of $DATABASE"
         fi
         
-        if [ $LOCALONLY ] && ! pg_dump -Fp -s "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+        if [ $LOCALONLY ] && ! pg_dump -Fp -s "$DATABASE" $USE_ROLE_NAME | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
             echo "[!!ERROR!!] Failed to backup local database schema of $DATABASE" 1>&2
-        elif [ ! $LOCALONLY ] && ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+        elif [ ! $LOCALONLY ] && ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS $USE_ROLE_NAME "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
             echo "[!!ERROR!!] Failed to backup database schema of $DATABASE" 1>&2
         else
             mv $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz
@@ -339,9 +339,9 @@ function perform_backups()
                 echo "Plain backup of $DATABASE"
             fi;
  
-            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE"  $DEFAULT_ROLE_NAME  | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE"  $USE_ROLE_NAME  | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local plain backup database $DATABASE" 1>&2
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS $DEFAULT_ROLE_NAME "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS $USE_ROLE_NAME "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce plain backup database $DATABASE" 1>&2
             else
                 mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz
