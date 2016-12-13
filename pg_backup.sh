@@ -74,6 +74,10 @@ while [ $# -gt 0 ]; do
             HOURLY="true"
             shift 1
             ;;
+        -w)
+            PASSWORDLESS="-w"
+            shift 1
+            ;;
         -c)
             CONFIG_FILE_PATH="$2"
             shift 2
@@ -122,6 +126,10 @@ fi
 
 if [ ! $USERNAME ]; then
     USERNAME="postgres"
+fi;
+
+if [ ! $PASSWORDLESS ]; then
+    PASSWORDLESS=""
 fi;
 
 if [ $DEFAULT_BACKUP_DIR ]; then
@@ -264,7 +272,7 @@ function perform_backups()
     if [ $LOCALONLY ]; then
         SCHEMA_ONLY_DB_LIST=`psql -At -c "$SCHEMA_ONLY_QUERY" postgres`
     else
-        SCHEMA_ONLY_DB_LIST=`psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$SCHEMA_ONLY_QUERY" postgres`
+        SCHEMA_ONLY_DB_LIST=`psql -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS -At -c "$SCHEMA_ONLY_QUERY" postgres`
     fi;
  
     if [ ! $QUIET ]; then
@@ -278,7 +286,7 @@ function perform_backups()
         
         if [ $LOCALONLY ] && ! pg_dump -Fp -s "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
             echo "[!!ERROR!!] Failed to backup local database schema of $DATABASE" 1>&2
-        elif [ ! $LOCALONLY ] && ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+        elif [ ! $LOCALONLY ] && ! pg_dump -Fp -s -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
             echo "[!!ERROR!!] Failed to backup database schema of $DATABASE" 1>&2
         else
             mv $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"_SCHEMA-$CURRENT_TIMESTAMP.sql.gz
@@ -304,7 +312,7 @@ function perform_backups()
     if [ $LOCALONLY ]; then
         DATABASES=`psql -At -c "$FULL_BACKUP_QUERY" postgres`
     else
-        DATABASES=`psql -h "$HOSTNAME" -U "$USERNAME" -At -c "$FULL_BACKUP_QUERY" postgres`
+        DATABASES=`psql -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS -At -c "$FULL_BACKUP_QUERY" postgres`
     fi
 
     for DATABASE in $DATABASES; do
@@ -315,7 +323,7 @@ function perform_backups()
  
             if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local plain backup database $DATABASE" 1>&2
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce plain backup database $DATABASE" 1>&2
             else
                 mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz
