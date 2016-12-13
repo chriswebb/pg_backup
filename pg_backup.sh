@@ -339,9 +339,9 @@ function perform_backups()
                 echo "Plain backup of $DATABASE"
             fi;
  
-            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE"  $USE_ROLE_NAME  | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE" $INSERTS $USE_ROLE_NAME | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local plain backup database $DATABASE" 1>&2
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS $USE_ROLE_NAME "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS $INSERTS $USE_ROLE_NAME "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce plain backup database $DATABASE" 1>&2
             else
                 mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz
@@ -353,9 +353,9 @@ function perform_backups()
                 echo "Custom backup of $DATABASE"
             fi
  
-            if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" $INSERTS $DEFAULT_ROLE_NAME -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
+            if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" $INSERTS $USE_ROLE_NAME -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local custom backup database $DATABASE"
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" $INSERTS $DEFAULT_ROLE_NAME -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" $INSERTS $USE_ROLE_NAME -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
                 echo "[!!ERROR!!] Failed to produce custom backup database $DATABASE"
             else
                 mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom
