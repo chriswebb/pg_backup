@@ -54,6 +54,10 @@ while [ $# -gt 0 ]; do
             DEFAULT_ENABLE_CUSTOM_BACKUPS="true"
             shift 1
             ;;
+        -l)
+            DEFAULT_ROLE_NAME="--role=$2"
+            shift 2
+            ;;
         -r)
             RECURRING="true"
             shift 1
@@ -76,6 +80,10 @@ while [ $# -gt 0 ]; do
             ;;
         -w)
             PASSWORDLESS="-w"
+            shift 1
+            ;;
+        -i)
+            INSERTS="--inserts"
             shift 1
             ;;
         -c)
@@ -171,6 +179,14 @@ fi
 if [ $DEFAULT_HOURS_TO_KEEP ]; then
     HOURS_TO_KEEP="$DEFAULT_HOURS_TO_KEEP"
 fi
+
+if [ ! $INSERTS ]; then
+    INSERTS=""
+fi;
+
+if [ ! $DEFAULT_ROLE_NAME ]; then
+    DEFAULT_ROLE_NAME=""
+fi;
 
 ###################################
 #### PRE-BACKUP CHECKS ####
@@ -321,9 +337,9 @@ function perform_backups()
                 echo "Plain backup of $DATABASE"
             fi;
  
-            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+            if [ $LOCALONLY ] && ! pg_dump -Fp "$DATABASE"  $DEFAULT_ROLE_NAME  | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local plain backup database $DATABASE" 1>&2
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fp -h "$HOSTNAME" -U "$USERNAME" $PASSWORDLESS $DEFAULT_ROLE_NAME "$DATABASE" | gzip > $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress; then
                 echo "[!!ERROR!!] Failed to produce plain backup database $DATABASE" 1>&2
             else
                 mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.sql.gz
@@ -335,9 +351,9 @@ function perform_backups()
                 echo "Custom backup of $DATABASE"
             fi
  
-            if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
+            if [ $LOCALONLY ] && ! pg_dump -Fc "$DATABASE" $INSERTS $DEFAULT_ROLE_NAME -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
                 echo "[!!ERROR!!] Failed to produce local custom backup database $DATABASE"
-            elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
+            elif [ ! $LOCALONLY ] && ! pg_dump -Fc -h "$HOSTNAME" -U "$USERNAME" "$DATABASE" $INSERTS $DEFAULT_ROLE_NAME -f $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress; then
                 echo "[!!ERROR!!] Failed to produce custom backup database $DATABASE"
             else
                 mv $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom.in_progress $FINAL_BACKUP_DIR"$DATABASE"-$CURRENT_TIMESTAMP.custom
