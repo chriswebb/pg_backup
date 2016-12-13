@@ -55,7 +55,7 @@ while [ $# -gt 0 ]; do
             shift 1
             ;;
         -l)
-            DEFAULT_ROLE_NAME="--role=$2"
+            DEFAULT_ROLE_NAME="$2"
             shift 2
             ;;
         -r)
@@ -185,7 +185,9 @@ if [ ! $INSERTS ]; then
 fi;
 
 if [ ! $DEFAULT_ROLE_NAME ]; then
-    DEFAULT_ROLE_NAME=""
+    USE_ROLE_NAME=""
+else
+    USE_ROLE_NAME="--role=$DEFAULT_ROLE_NAME"
 fi;
 
 ###################################
